@@ -1,0 +1,12 @@
+EXPR -> EXPR space EXPR
+      | lambda ident dot EXPR
+      | varname
+      | pliteral.
+
+// No left recursion:
+EXPR -> lambda ident dot EXPR EXPR1
+      | varname EXPR1
+      | pliteral EXPR1 .
+
+EXPR1 -> space EXPR EXPR1
+       | .
