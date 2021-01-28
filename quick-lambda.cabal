@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6c31c17a5dee2f108d7fd7fa51f47e8d6e768a05b0e4c49a1baf7df00d96f320
+-- hash: a1e04eb7189c66a0f7f6c4d093300da6570fe0c943ceb3c701dd6ea6e64355d9
 
 name:           quick-lambda
 version:        0.1.0.0
@@ -30,6 +30,7 @@ library
       Ast
       Parse
       Pretty
+      Repl
   other-modules:
       Paths_quick_lambda
   hs-source-dirs:
