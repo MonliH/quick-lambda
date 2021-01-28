@@ -4,6 +4,7 @@ import           Text.Megaparsec.Char
 import           Control.Monad.Combinators.Expr
 import           Data.Void
 import           Data.Functor
+import           Data.Maybe                     ( fromMaybe )
 import           Ast
 import qualified Text.Megaparsec.Char.Lexer    as L
 
@@ -21,27 +22,8 @@ symbol = L.symbol sc
 pLambdaSymbol :: Parser String
 pLambdaSymbol = choice [symbol "\\", symbol "λ"]
 
-rws :: [String]
-rws =
-  [ "if"
-  , "then"
-  , "else"
-  , "while"
-  , "do"
-  , "skip"
-  , "true"
-  , "false"
-  , "not"
-  , "and"
-  , "or"
-  ]
 identifier :: Parser Name
-identifier = Name <$> (lexeme . try) (p >>= check)
- where
-  p = (:) <$> letterChar <*> Text.Megaparsec.many alphaNumChar
-  check x = if x `elem` rws
-    then fail $ "keyword " ++ show x ++ " cannot be an identifier"
-    else return x
+identifier = Name <$> fmap (: []) letterChar
 
 pVarName :: Parser Expr
 pVarName = Var <$> identifier
@@ -50,7 +32,7 @@ pInteger :: Parser Lit
 pInteger = LInt <$> lexeme L.decimal
 
 rWord :: String -> Parser ()
-rWord w = string w *> notFollowedBy alphaNumChar *> sc
+rWord w = string w *> notFollowedBy letterChar *> sc
 
 pBool :: Parser Lit
 pBool = (rWord "true" $> LBool True) <|> (rWord "false" $> LBool False)
@@ -58,19 +40,27 @@ pBool = (rWord "true" $> LBool True) <|> (rWord "false" $> LBool False)
 pLiteral :: Parser Expr
 pLiteral = Lit <$> choice [pInteger, pBool]
 
+pArgs :: Parser (Expr -> Expr)
+pArgs = fromMaybe id <$> optional
+  (do
+    ids <- many identifier
+    return $ \expr -> foldr Lam expr ids
+  )
+
 pLambda :: Parser Expr
 pLambda = do
   pLambdaSymbol
-  name <- identifier
+  name      <- identifier
+  otherArgs <- pArgs
   symbol "."
-  Lam name <$> pTerm
+  Lam name . otherArgs <$> pTerm
 
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
 pTerm :: Parser Expr
 pTerm = do
-  choice [pVarName, pLiteral, pLambda, parens pExpr]
+  choice [pLambda, pVarName, pLiteral, parens pExpr]
 
 binary :: Parser () -> (Expr -> Expr -> Expr) -> Operator Parser Expr
 binary name f = InfixL (f <$ name)

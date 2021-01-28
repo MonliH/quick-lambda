@@ -24,6 +24,8 @@ dependencies:
 - pretty
 - megaparsec
 - parser-combinators
+- haskeline
+- text
 
 library:
   source-dirs: src
