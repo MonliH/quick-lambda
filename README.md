@@ -28,7 +28,7 @@ This is just standard lambda calculus, for example the Y-Combinator (and factori
 
 As seen above, the interpreter is lazy (using call-by-need)!
 
-If you try the same in Javascript, it'll just stack overflow:
+If you try the same in Javascript (which uses eager evalulation), it'll just stack overflow:
 
 ```js
 const Y = (g) => ((x) => g(x(x)))((x) => g(x(x)));
