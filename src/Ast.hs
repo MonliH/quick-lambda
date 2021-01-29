@@ -7,7 +7,12 @@ import GHC.Generics (Generic)
 newtype Name = Name String deriving (Show, Eq, Ord, Generic)
 instance Hashable Name
 
-data BinOp = Add | Mul | Sub deriving (Show)
+data BinOp = Add | Mul | Sub
+
+instance Show BinOp where
+  show Add = "add"
+  show Mul = "multiply"
+  show Sub = "subtract"
 
 data Expr = Var Name
           | App Expr Expr

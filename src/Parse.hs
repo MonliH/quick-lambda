@@ -22,17 +22,25 @@ symbol = L.symbol sc
 pLambdaSymbol :: Parser String
 pLambdaSymbol = choice [symbol "\\", symbol "λ"]
 
+rWord :: String -> Parser ()
+rWord w = string w *> notFollowedBy letterChar *> sc
+
+rws :: [String] -- list of reserved words
+rws = ["let"]
+
 identifier :: Parser Name
-identifier = Name <$> fmap (: []) letterChar
+identifier = Name <$> (lexeme . try) (p >>= check)
+ where
+  p = (:) <$> letterChar <*> many alphaNumChar
+  check x = if x `elem` rws
+    then fail $ "keyword " ++ show x ++ " cannot be an identifier"
+    else return x
 
 pVarName :: Parser Expr
 pVarName = Var <$> identifier
 
 pInteger :: Parser Lit
 pInteger = LInt <$> lexeme L.decimal
-
-rWord :: String -> Parser ()
-rWord w = string w *> notFollowedBy letterChar *> sc
 
 pBool :: Parser Lit
 pBool = (rWord "true" $> LBool True) <|> (rWord "false" $> LBool False)
@@ -53,14 +61,14 @@ pLambda = do
   name      <- identifier
   otherArgs <- pArgs
   symbol "."
-  Lam name . otherArgs <$> pTerm
+  Lam name . otherArgs <$> pExpr
 
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
 pTerm :: Parser Expr
 pTerm = do
-  choice [pLambda, pVarName, pLiteral, parens pExpr]
+  choice [pLambda, pVarName, pLiteral, parens pExprOuter]
 
 binary :: Parser () -> (Expr -> Expr -> Expr) -> Operator Parser Expr
 binary name f = InfixL (f <$ name)
@@ -68,9 +76,16 @@ binary name f = InfixL (f <$ name)
 pExpr :: Parser Expr
 pExpr = makeExprParser
   pTerm
-  [ [binary sc App]
-  , [binary (void (symbol "*")) (BinOp Mul)]
+  [ [binary (void (symbol "*")) (BinOp Mul)]
   , [ binary (void (symbol "+")) (BinOp Add)
     , binary (void (symbol "-")) (BinOp Sub)
     ]
   ]
+
+pFuncApp :: Parser Expr
+pFuncApp = makeExprParser pExpr [[binary sc App]]
+
+pExprOuter :: Parser Expr
+pExprOuter = do
+  _ <- optional sc
+  pFuncApp

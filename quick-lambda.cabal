@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2343c78188da75c9845eb208a1411c466cf2a3c4db1f1101effa5a1322aece0a
+-- hash: 351e7a80d75704b0bea77f21c153c5f81cec897860f97c5ca0051efbf0eba6b9
 
 name:           quick-lambda
 version:        0.1.0.0
@@ -19,7 +19,6 @@ license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md
-    ChangeLog.md
 
 source-repository head
   type: git
@@ -33,6 +32,7 @@ library
       Parse
       Pretty
       Repl
+      RuntimeError
   other-modules:
       Paths_quick_lambda
   hs-source-dirs:
