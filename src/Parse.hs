@@ -66,4 +66,11 @@ binary :: Parser () -> (Expr -> Expr -> Expr) -> Operator Parser Expr
 binary name f = InfixL (f <$ name)
 
 pExpr :: Parser Expr
-pExpr = makeExprParser pTerm [[binary sc App]]
+pExpr = makeExprParser
+  pTerm
+  [ [binary sc App]
+  , [binary (void (symbol "*")) (BinOp Mul)]
+  , [ binary (void (symbol "+")) (BinOp Add)
+    , binary (void (symbol "-")) (BinOp Sub)
+    ]
+  ]

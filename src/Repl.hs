@@ -1,16 +1,24 @@
 module Repl where
 
-import           System.IO
-import           System.Console.Haskeline
 import           Ast
 import           Pretty
 import           Parse
-import           Text.Megaparsec
+import           Eval
+import           DisplayColor
+import           System.IO
+import           System.Console.Haskeline
 import           Text.Printf
+import           Text.Megaparsec                ( parse
+                                                , eof
+                                                , errorBundlePretty
+                                                )
 import           Control.Monad                  ( unless )
+import           Control.Exception              ( try, IOException )
+import           Control.Monad.IO.Class
 import           Data.Maybe                     ( fromJust )
 import           Data.Tuple                     ( swap )
 import           Data.List                      ( intercalate )
+import qualified Data.HashMap                  as HM
 
 
 prompt :: String -> IO String
@@ -18,21 +26,6 @@ prompt text = do
   putStr text
   hFlush stdout
   getLine
-
-data Font = Bold | Reset | Red | Green | Blue deriving Eq
-table =
-  [ (Bold , "\ESC[1m")
-  , (Reset, "\ESC[0m")
-  , (Blue , "\ESC[94m")
-  , (Red  , "\ESC[91m")
-  , (Green, "\ESC[92m")
-  ]
-
-getEscape font = fromJust $ lookup font table
-
-displayColor :: [Font] -> String -> String
-displayColor font text =
-  foldl1 (++) (map getEscape font) ++ text ++ getEscape Reset
 
 quit = [":quit", ":q"]
 help = [":help", ":h"]
@@ -65,9 +58,13 @@ repl = do
         ]
       )
     "" -> outputStr ""
-    _ -> case parse (pExpr <* eof) "<string>" code of
+    _  -> case parse (pExpr <* eof) "<string>" code of
       Left  err -> outputStrLn (errorBundlePretty err)
-      Right ast -> outputStrLn $ show ast
+      Right ast -> do
+        res <- liftIO $ try $ eval HM.empty ast
+        case res :: Either IOException Value of
+          Left  e          -> outputStrLn $ show e 
+          Right expression -> outputStrLn $ show expression
 
   unless (code `elem` quit) repl
 

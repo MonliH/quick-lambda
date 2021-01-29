@@ -26,6 +26,9 @@ dependencies:
 - parser-combinators
 - haskeline
 - text
+- hashmap
+- hashable
+- transformers
 
 library:
   source-dirs: src

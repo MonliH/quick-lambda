@@ -33,11 +33,11 @@ instance Pretty Expr where
   ppr p e = case e of
     Lit (LInt  a) -> text (show a)
     Lit (LBool b) -> text (show b)
-    Var (Name  x) -> text x
+    Var (Name x) -> text x
     App a b       -> parensIf (p > 0) $ ppr (p + 1) a <+> ppr p b
     Lam x a ->
       parensIf (p > 0)
-        $     char '\\'
+        $     char '\955'
         PP.<> hsep (fmap (ppr 0) (viewVars e))
         <+>   text "->"
         <+>   ppr (p + 1) (viewBody e)
