@@ -9,11 +9,17 @@ import           Control.Monad.Trans.Except
 
 data Value = VBool Bool
            | VInt Int
-           | VLambda (Thunk -> IO (Either Error Value))
+           | VLambda (Thunk -> IO EEV)
+
+instance Eq Value where
+  (==) (VBool l) (VBool r) = l == r
+  (==) (VInt  l) (VInt  r) = l == r
+  (==) _         _         = False
+  (/=) l r = not (l == r)
 
 instance Show Value where
-  show (VBool    bool) = show bool ++ " (bool)"
-  show (VInt     int ) = show int ++ " (int)"
+  show (VBool   bool) = if bool then "true" else "false" ++ " (bool)"
+  show (VInt    int ) = show int ++ " (int)"
   show (VLambda _   ) = "<lambda>"
 
 type Thunk = () -> IO EEV
@@ -42,6 +48,11 @@ newThunk env name expr th = do
   th' <- newIORef th
   eval (HM.insert name th' env) expr
 
+getBoolFunc :: Env -> Bool -> IO EEV
+getBoolFunc env bool = eval
+  env
+  (Lam (Name "a") (Lam (Name "b") (Var (Name (if bool then "a" else "b")))))
+
 eval :: Env -> Expr -> IO EEV
 eval env expr = do
   case expr of
@@ -65,24 +76,42 @@ eval env expr = do
       closure <- eval env fn
       case closure of
         Right (VLambda closure) -> closure (\() -> eval env expr)
-        Right other              -> return $ Left $ makeError
+        Right (VBool   bool   ) -> do
+          Right (VLambda fn) <- getBoolFunc env bool
+          fn (\() -> eval env expr)
+        Right other -> return $ Left $ makeError
           RuntimeTypeError
           ('`' : show other ++ "` is not a lambda")
         Left err -> return $ Left err
 
-    Lit (LInt  int )     -> return $ Right $ VInt int
-    Lit (LBool bool)     -> return $ Right $ VBool bool
+    Lit (LInt  int ) -> return $ Right $ VInt int
+    Lit (LBool bool) -> return $ Right $ VBool bool
 
-    BinOp Add left right -> evalBinOp env Add left right (\a b -> VInt $ a + b)
-    BinOp Mul left right -> evalBinOp env Mul left right (\a b -> VInt $ a * b)
-    BinOp Sub left right -> evalBinOp env Sub left right (\a b -> VInt $ a - b)
+    BinOp Eq left right ->
+      evalBinOp env Sub left right (\a b -> Right $ VBool $ a == b)
 
-evalBinOp :: Env -> BinOp -> Expr -> Expr -> (Int -> Int -> Value) -> IO EEV
+    BinOp op left right -> evalBinOpNumber env op left right $ case op of
+      Add -> (\a b -> Right $ VInt $ a + b)
+      Mul -> (\a b -> Right $ VInt $ a * b)
+      Sub -> (\a b -> Right $ VInt $ a - b)
+
+evalBinOpNumber
+  :: Env -> BinOp -> Expr -> Expr -> (Int -> Int -> EEV) -> IO EEV
+evalBinOpNumber env op left right fn = evalBinOp
+  env
+  op
+  left
+  right
+  (\l r -> case (l, r) of
+    (VInt l, VInt r) -> fn l r
+    _                -> Left $ binOpError op l r
+  )
+
+evalBinOp :: Env -> BinOp -> Expr -> Expr -> (Value -> Value -> EEV) -> IO EEV
 evalBinOp env op left right fn = do
-      eLeft  <- eval env left
-      eRight <- eval env right
-      case (eLeft, eRight) of
-        (Right (VInt l), Right (VInt r)) -> return $ Right $ fn l r
-        (Right l, Right r) -> return $ Left $ binOpError op l r
-        (Left err, _) -> return eLeft
-        (Right _, Left err) -> return eRight
+  eLeft  <- eval env left
+  eRight <- eval env right
+  case (eLeft, eRight) of
+    (Right l  , Right r ) -> return $ fn l r
+    (Left  err, _       ) -> return eLeft
+    (Right _  , Left err) -> return eRight

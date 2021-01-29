@@ -68,7 +68,7 @@ parens = between (symbol "(") (symbol ")")
 
 pTerm :: Parser Expr
 pTerm = do
-  choice [pLambda, pVarName, pLiteral, parens pExprOuter]
+  choice [pLiteral, pLambda, pVarName, parens pExprOuter]
 
 binary :: Parser () -> (Expr -> Expr -> Expr) -> Operator Parser Expr
 binary name f = InfixL (f <$ name)
@@ -79,7 +79,8 @@ pExpr = makeExprParser
   [ [binary (void (symbol "*")) (BinOp Mul)]
   , [ binary (void (symbol "+")) (BinOp Add)
     , binary (void (symbol "-")) (BinOp Sub)
-    ]
+    ],
+    [ binary  (void (symbol "==")) (BinOp Eq)]
   ]
 
 pFuncApp :: Parser Expr

@@ -55,18 +55,16 @@ repl = do
   case input of
     Just c | ":parse" `isPrefixOf` c -> parseStr (drop 6 c) (outputStrLn . show)
     Just c | c `elem` quit -> outputStrLn $ displayColor [Green] "bye!"
-    Just c | c `elem` help -> outputStrLn $ printf
-      "\n%s\n\n%s\n"
-      logo
-      (intercalate
-        "\n"
-        [ printf " %s - %s"
-                 (displayColor [Bold, Blue] "quick-lambda")
-                 (displayColor [Blue] "A lambda calculus interpreter.")
-        , formatHelp help "show this help message"
-        , formatHelp quit "exit the interpreter"
-        ]
-      )
+    Just c | c `elem` help ->
+      outputStrLn
+        $  "\n"
+        ++ intercalate
+             "\n"
+             [ heading
+             , formatHelp help "show this help message"
+             , formatHelp quit "exit the interpreter"
+             ]
+        ++ "\n"
     Just "" -> outputStr ""
     Just c  -> parseStr
       c
@@ -81,10 +79,9 @@ repl = do
 
   unless (maybe False (`elem` quit) input) repl
 
-logo =
-  "  ____        _      _      _                     _         _\n\
-\ / __ \\      (_)    | |    | |                   | |       | |\n\
-\| |  | |_   _ _  ___| | __ | |     __ _ _ __ ___ | |__   __| | __ _\n\
-\| |  | | | | | |/ __| |/ / | |    / _` | '_ ` _ \\| '_ \\ / _` |/ _` |\n\
-\| |__| | |_| | | (__|   <  | |___| (_| | | | | | | |_) | (_| | (_| |\n\
-\ \\___\\_\\\\__,_|_|\\___|_|\\_\\ |______\\__,_|_| |_| |_|_.__/ \\__,_|\\__,_|"
+heading = printf " %s (%s) - %s"
+                 (displayColor [Bold, Blue] "quick-lambda")
+                 (displayColor [Green] version)
+                 (displayColor [Blue] "A lambda calculus interpreter.")
+
+version = "0.0.1"
